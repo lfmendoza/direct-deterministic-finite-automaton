@@ -164,8 +164,34 @@ La concatenacion es implicita: `ab` significa `a` seguido de `b`.
 
 ## Arquitectura
 
-```
-Regex (infija) -> Shunting-Yard -> Postfijo -> Arbol Sintactico -> followpos -> AFD -> Minimizacion -> Visualizacion / Simulacion
+```mermaid
+flowchart LR
+    A["Regex (infija)\n\n(a|b)*abb"] -->|"shunting_yard.py\n_desugar()\ninsert_explicit_concat()"| B["Desazucarado\n+\nConcatenacion explicita\n\n(a|b)*.a.b.b"]
+
+    B -->|"shunting_yard.py\nshunting_yard()"| C["Postfijo\n\nab|*a.b.b."]
+
+    C -->|"syntax_tree.py\nbuild_syntax_tree()"| D["Arbol Sintactico\n\nnullable, firstpos\nlastpos, followpos"]
+
+    D -->|"direct_dfa.py\nbuild_direct_dfa()"| E["AFD\n(construccion directa)"]
+
+    E -->|"minimization.py\nminimize_dfa()"| F["AFD Minimizado"]
+
+    F --> G["visualization.py\nrender_dfa()\nprint_dfa_table()"]
+    F --> H["simulation.py\nsimulate_dfa()"]
+
+    G -->|"Salida"| I["Diagrama PNG\n+\nTabla de transiciones"]
+    H -->|"Salida"| J["Cadena ACEPTADA\no RECHAZADA"]
+
+    style A fill:#4a90d9,color:#fff
+    style B fill:#5ba0e0,color:#fff
+    style C fill:#5ba0e0,color:#fff
+    style D fill:#6db33f,color:#fff
+    style E fill:#e8a838,color:#fff
+    style F fill:#e8a838,color:#fff
+    style G fill:#9b59b6,color:#fff
+    style H fill:#9b59b6,color:#fff
+    style I fill:#2c3e50,color:#fff
+    style J fill:#2c3e50,color:#fff
 ```
 
 | Modulo                       | Descripcion                                              |
