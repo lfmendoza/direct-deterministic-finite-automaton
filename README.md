@@ -10,17 +10,19 @@ Programa que construye un AFD (Automata Finito Determinista) directamente a part
 
 ```
 direct-deterministic-finite-automaton/
-├── automaton/                # Paquete principal
-│   ├── __init__.py           # Re-exporta la API publica
-│   ├── shunting_yard.py      # Conversion infija a postfija (Shunting-Yard)
-│   ├── syntax_tree.py        # Arbol sintactico, nullable, firstpos, lastpos, followpos
-│   ├── direct_dfa.py         # Construccion directa del AFD desde followpos
-│   ├── minimization.py       # Minimizacion del AFD (algoritmo de Hopcroft)
-│   ├── simulation.py         # Simulacion de aceptacion de cadenas
-│   └── visualization.py      # Diagramas con Graphviz y tabla de transiciones
-├── output/                   # Diagramas generados (no se versiona)
-├── main.py                   # Punto de entrada interactivo
-├── requirements.txt          # Dependencias de Python
+├── automaton/                    # Paquete principal
+│   ├── __init__.py               # Re-exporta la API publica
+│   ├── shunting_yard.py          # Conversion infija a postfija (Shunting-Yard)
+│   ├── syntax_tree.py            # Arbol sintactico, nullable, firstpos, lastpos, followpos
+│   ├── direct_dfa.py             # Construccion directa del AFD desde followpos
+│   ├── minimization.py           # Minimizacion del AFD (algoritmo de Hopcroft)
+│   ├── simulation.py             # Simulacion de aceptacion de cadenas
+│   └── visualization.py          # Diagramas con Graphviz y tabla de transiciones
+├── docs/                         # Documentacion del laboratorio
+│   └── procedimiento_manual.tex  # Procedimiento manual (a|b)* a AFD (LaTeX/Overleaf)
+├── output/                       # Diagramas generados (no se versiona)
+├── main.py                       # Punto de entrada interactivo
+├── requirements.txt              # Dependencias de Python
 └── README.md
 ```
 
@@ -166,51 +168,51 @@ La concatenacion es implicita: `ab` significa `a` seguido de `b`.
 
 ```mermaid
 flowchart TB
-    IN[/"Expresion regular del usuario\n(a|b)*abb"/]
+    IN[/"Expresion regular del usuario<br/>Ej: #40;a#124;b#41;*abb"/]
 
-    subgraph FASE1 ["Fase 1 · Preprocesamiento — shunting_yard.py"]
+    subgraph FASE1 ["Fase 1 - Preprocesamiento"]
         direction TB
-        P1["Aumentar regex\nr → (r)#"]
-        P2["_desugar( )\nExpandir azucar sintactico\na+ → a.a* · a? → (a|ε)"]
-        P3["insert_explicit_concat( )\nInsertar concatenacion explicita\n(a|b)*abb → (a|b)*.a.b.b"]
-        P4["shunting_yard( )\nConversion infija a postfija\n→ ab|*a.b.b."]
+        P1["Aumentar regex<br/>r se convierte en #40;r#41;#"]
+        P2["_desugar#40;#41;<br/>Expandir azucar sintactico<br/>a+ se convierte en a.a*<br/>a? se convierte en #40;a#124;e#41;"]
+        P3["insert_explicit_concat#40;#41;<br/>Insertar concatenacion explicita<br/>#40;a#124;b#41;*abb se convierte en #40;a#124;b#41;*.a.b.b"]
+        P4["shunting_yard#40;#41;<br/>Conversion infija a postfija<br/>Resultado: ab#124;*a.b.b."]
         P1 --> P2 --> P3 --> P4
     end
 
-    subgraph FASE2 ["Fase 2 · Arbol Sintactico — syntax_tree.py"]
+    subgraph FASE2 ["Fase 2 - Arbol Sintactico"]
         direction TB
-        T1["build_syntax_tree( )\nConstruir arbol desde postfijo\nNodos: LeafNode · CatNode · OrNode · StarNode"]
-        T2["Calcular propiedades por nodo\nnullable · firstpos · lastpos"]
-        T3["_compute_followpos( )\nRegla CAT: para i en lastpos(izq) → agregar firstpos(der)\nRegla STAR: para i en lastpos(hijo) → agregar firstpos(hijo)"]
+        T1["build_syntax_tree#40;#41;<br/>Construir arbol desde postfijo<br/>Nodos: LeafNode, CatNode, OrNode, StarNode"]
+        T2["Calcular propiedades por nodo<br/>nullable, firstpos, lastpos"]
+        T3["_compute_followpos#40;#41;<br/>Regla CAT: lastpos#40;izq#41; agrega firstpos#40;der#41;<br/>Regla STAR: lastpos#40;hijo#41; agrega firstpos#40;hijo#41;"]
         T1 --> T2 --> T3
     end
 
-    subgraph FASE3 ["Fase 3 · Construccion del AFD — direct_dfa.py"]
+    subgraph FASE3 ["Fase 3 - Construccion del AFD"]
         direction TB
-        D1["Estado inicial = firstpos(raiz)"]
-        D2["Para cada estado no marcado:\npor cada simbolo a del alfabeto,\nunir followpos de posiciones con simbolo a"]
-        D3["Marcar como aceptacion\ntodo estado que contenga la posicion de #"]
+        D1["Estado inicial = firstpos#40;raiz#41;"]
+        D2["Para cada estado no marcado:<br/>por cada simbolo del alfabeto,<br/>unir followpos de posiciones con ese simbolo"]
+        D3["Marcar como aceptacion<br/>todo estado que contenga la posicion de #"]
         D1 --> D2 --> D3
     end
 
-    subgraph FASE4 ["Fase 4 · Minimizacion — minimization.py"]
+    subgraph FASE4 ["Fase 4 - Minimizacion"]
         direction TB
-        M1["Particion inicial\naceptacion vs no-aceptacion"]
-        M2["minimize_dfa( )\nRefinamiento iterativo de Hopcroft:\ndividir particiones segun transiciones"]
-        M3["Construir AFD minimo equivalente\nfusionando estados indistinguibles"]
+        M1["Particion inicial<br/>aceptacion vs no-aceptacion"]
+        M2["minimize_dfa#40;#41;<br/>Refinamiento iterativo de Hopcroft:<br/>dividir particiones segun transiciones"]
+        M3["Construir AFD minimo equivalente<br/>fusionando estados indistinguibles"]
         M1 --> M2 --> M3
     end
 
-    subgraph FASE5 ["Fase 5 · Salida"]
+    subgraph FASE5 ["Fase 5 - Salida"]
         direction LR
         subgraph VIZ ["visualization.py"]
             direction TB
-            V1["print_dfa_table( )\nTabla de transiciones\nen consola"]
-            V2["render_dfa( )\nDiagrama PNG\ncon Graphviz"]
+            V1["print_dfa_table#40;#41;<br/>Tabla de transiciones en consola"]
+            V2["render_dfa#40;#41;<br/>Diagrama PNG con Graphviz"]
         end
         subgraph SIM ["simulation.py"]
             direction TB
-            S1["simulate_dfa( )\nRecorrer estados del AFD\ncon la cadena de entrada w"]
+            S1["simulate_dfa#40;#41;<br/>Recorrer estados del AFD<br/>con la cadena de entrada w"]
             S2[/"ACEPTADA o RECHAZADA"/]
             S1 --> S2
         end
@@ -219,7 +221,7 @@ flowchart TB
     IN -->|"regex: str"| FASE1
     FASE1 -->|"postfix: str"| FASE2
     FASE2 -->|"root, pos_symbols, followpos"| FASE3
-    FASE3 -->|"DFA (estados, transiciones, aceptacion)"| FASE4
+    FASE3 -->|"DFA"| FASE4
     FASE4 -->|"DFA minimizado"| FASE5
 
     style IN fill:#34495e,color:#fff
@@ -244,15 +246,15 @@ flowchart TB
 
 El programa se orquesta desde `main.py`, que coordina todas las fases y maneja la interaccion con el usuario.
 
-| Modulo                       | Descripcion                                              |
-| ---------------------------- | -------------------------------------------------------- |
-| `automaton/shunting_yard.py` | Conversion infija a postfija con concatenacion explicita |
-| `automaton/syntax_tree.py`   | Arbol sintactico, nullable, firstpos, lastpos, followpos |
-| `automaton/direct_dfa.py`    | Construccion directa del AFD desde followpos             |
-| `automaton/minimization.py`  | Minimizacion por refinamiento de particiones (Hopcroft)  |
-| `automaton/simulation.py`    | Prueba de aceptacion de cadenas                          |
-| `automaton/visualization.py` | Generacion de diagramas PNG y tabla de transiciones      |
-| `main.py`                    | Programa principal interactivo (orquestador)             |
+| Fase | Modulo                       | Descripcion                                              |
+| ---- | ---------------------------- | -------------------------------------------------------- |
+| 1    | `automaton/shunting_yard.py` | Conversion infija a postfija con concatenacion explicita |
+| 2    | `automaton/syntax_tree.py`   | Arbol sintactico, nullable, firstpos, lastpos, followpos |
+| 3    | `automaton/direct_dfa.py`    | Construccion directa del AFD desde followpos             |
+| 4    | `automaton/minimization.py`  | Minimizacion por refinamiento de particiones (Hopcroft)  |
+| 5    | `automaton/simulation.py`    | Prueba de aceptacion de cadenas                          |
+| 5    | `automaton/visualization.py` | Generacion de diagramas PNG y tabla de transiciones      |
+| --   | `main.py`                    | Programa principal interactivo (orquestador)             |
 
 ## Ejemplo resuelto: `(a|b)*` a AFD (procedimiento manual)
 

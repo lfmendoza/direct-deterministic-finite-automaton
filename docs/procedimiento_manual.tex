@@ -1,0 +1,329 @@
+\documentclass[12pt, letterpaper]{article}
+
+% --- Paquetes ---
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{automata, positioning, arrows.meta}
+\usepackage{forest}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{hyperref}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+}
+
+\title{
+    Construcci\'on Directa de AFD a partir de \texttt{(a|b)*} \\[6pt]
+    \large Procedimiento Manual --- Dise\~no de Lenguajes de Programaci\'on
+}
+\author{Universidad del Valle de Guatemala}
+\date{}
+
+\begin{document}
+\maketitle
+
+% ============================================================
+\section{Objetivo}
+% ============================================================
+
+Convertir la expresi\'on regular \texttt{(a|b)*} a un Aut\'omata Finito Determinista (AFD)
+mediante el algoritmo de \textbf{construcci\'on directa} basado en \textit{followpos}
+(Aho et al., Secci\'on 3.9.5). Se presenta cada paso del procedimiento realizado
+a mano y se valida el resultado final.
+
+% ============================================================
+\section{Paso 1: Expresi\'on regular aumentada}
+% ============================================================
+
+Se agrega el marcador de fin \texttt{\#} concatenado a la expresi\'on original:
+
+\[
+    r' = (\texttt{a} \mid \texttt{b})^{*} \cdot \texttt{\#}
+\]
+
+Esto permite identificar los estados de aceptaci\'on del AFD: ser\'an aquellos
+cuyo conjunto de posiciones contenga la posici\'on asignada a \texttt{\#}.
+
+% ============================================================
+\section{Paso 2: \'Arbol sint\'actico con posiciones}
+% ============================================================
+
+Se construye el \'arbol sint\'actico de $r'$ y se asignan posiciones num\'ericas
+a cada hoja que representa un s\'imbolo del alfabeto o el marcador de fin.
+
+\begin{center}
+\begin{forest}
+    for tree={
+        circle, draw, minimum size=1.2cm, inner sep=2pt,
+        s sep=1.8cm, l sep=1.5cm,
+        edge={->, thick},
+        font=\normalsize,
+    }
+    [$\cdot$
+        [$*$
+            [$|$
+                [\texttt{a}\\{\scriptsize pos 1}, fill=blue!10]
+                [\texttt{b}\\{\scriptsize pos 2}, fill=blue!10]
+            ]
+        ]
+        [\texttt{\#}\\{\scriptsize pos 3}, fill=red!10]
+    ]
+\end{forest}
+\end{center}
+
+Las posiciones asignadas son:
+
+\begin{center}
+\begin{tabular}{cl}
+    \toprule
+    \textbf{Posici\'on} & \textbf{S\'imbolo} \\
+    \midrule
+    1 & \texttt{a} \\
+    2 & \texttt{b} \\
+    3 & \texttt{\#} (marcador de fin) \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================
+\section{Paso 3: C\'alculo de \textit{nullable}, \textit{firstpos} y \textit{lastpos}}
+% ============================================================
+
+Se calculan las tres propiedades para cada nodo del \'arbol, de las hojas
+hacia la ra\'iz, aplicando las reglas del algoritmo.
+
+\subsection*{Reglas utilizadas}
+
+\begin{itemize}[nosep]
+    \item \textbf{Hoja con s\'imbolo $c$ en posici\'on $i$:}
+        $\text{nullable} = \text{false}$, \;
+        $\text{firstpos} = \{i\}$, \;
+        $\text{lastpos} = \{i\}$.
+
+    \item \textbf{Uni\'on} ($c_1 \mid c_2$):
+        $\text{nullable} = \text{nullable}(c_1) \lor \text{nullable}(c_2)$, \;
+        $\text{firstpos} = \text{firstpos}(c_1) \cup \text{firstpos}(c_2)$, \;
+        $\text{lastpos} = \text{lastpos}(c_1) \cup \text{lastpos}(c_2)$.
+
+    \item \textbf{Concatenaci\'on} ($c_1 \cdot c_2$):
+        $\text{nullable} = \text{nullable}(c_1) \land \text{nullable}(c_2)$.
+
+        $\text{firstpos} = \begin{cases}
+            \text{firstpos}(c_1) \cup \text{firstpos}(c_2) & \text{si nullable}(c_1) \\
+            \text{firstpos}(c_1) & \text{en otro caso}
+        \end{cases}$
+
+        $\text{lastpos} = \begin{cases}
+            \text{lastpos}(c_1) \cup \text{lastpos}(c_2) & \text{si nullable}(c_2) \\
+            \text{lastpos}(c_2) & \text{en otro caso}
+        \end{cases}$
+
+    \item \textbf{Cerradura de Kleene} ($c_1^{*}$):
+        $\text{nullable} = \text{true}$, \;
+        $\text{firstpos} = \text{firstpos}(c_1)$, \;
+        $\text{lastpos} = \text{lastpos}(c_1)$.
+\end{itemize}
+
+\subsection*{Resultado por nodo}
+
+\begin{center}
+\begin{tabular}{lccc}
+    \toprule
+    \textbf{Nodo} & \textbf{nullable} & \textbf{firstpos} & \textbf{lastpos} \\
+    \midrule
+    \texttt{a} (pos 1) & false & $\{1\}$ & $\{1\}$ \\
+    \texttt{b} (pos 2) & false & $\{2\}$ & $\{2\}$ \\
+    $\texttt{a} \mid \texttt{b}$ & false & $\{1, 2\}$ & $\{1, 2\}$ \\
+    $(\texttt{a} \mid \texttt{b})^{*}$ & true & $\{1, 2\}$ & $\{1, 2\}$ \\
+    \texttt{\#} (pos 3) & false & $\{3\}$ & $\{3\}$ \\
+    $\cdot$ (ra\'iz) & false & $\{1, 2, 3\}$ & $\{3\}$ \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Nota sobre la ra\'iz} ($\cdot$, concatenaci\'on):
+
+$\text{firstpos}(\text{ra\'iz}) = \text{firstpos}(*)  \cup \text{firstpos}(\texttt{\#})$
+porque $\text{nullable}(*) = \text{true}$, entonces:
+
+\[
+    \text{firstpos}(\text{ra\'iz}) = \{1, 2\} \cup \{3\} = \{1, 2, 3\}
+\]
+
+$\text{lastpos}(\text{ra\'iz}) = \text{lastpos}(\texttt{\#}) = \{3\}$
+porque $\text{nullable}(\texttt{\#}) = \text{false}$.
+
+% ============================================================
+\section{Paso 4: C\'alculo de \textit{followpos}}
+% ============================================================
+
+Se aplican las dos reglas de \textit{followpos}:
+
+\subsection*{Regla de concatenaci\'on (nodo ra\'iz $\cdot$)}
+
+Para cada posici\'on $i$ en $\text{lastpos}(\text{hijo izquierdo})$, agregar
+$\text{firstpos}(\text{hijo derecho})$ a $\text{followpos}(i)$.
+
+\begin{itemize}[nosep]
+    \item $\text{lastpos}(*) = \{1, 2\}$, \quad $\text{firstpos}(\texttt{\#}) = \{3\}$
+    \item $\text{followpos}(1) \mathrel{+}= \{3\}$
+    \item $\text{followpos}(2) \mathrel{+}= \{3\}$
+\end{itemize}
+
+\subsection*{Regla de cerradura de Kleene (nodo $*$)}
+
+Para cada posici\'on $i$ en $\text{lastpos}(\text{hijo})$, agregar
+$\text{firstpos}(\text{hijo})$ a $\text{followpos}(i)$.
+
+\begin{itemize}[nosep]
+    \item $\text{lastpos}(\texttt{a}|\texttt{b}) = \{1, 2\}$, \quad $\text{firstpos}(\texttt{a}|\texttt{b}) = \{1, 2\}$
+    \item $\text{followpos}(1) \mathrel{+}= \{1, 2\}$
+    \item $\text{followpos}(2) \mathrel{+}= \{1, 2\}$
+\end{itemize}
+
+\subsection*{Tabla \textit{followpos} resultante}
+
+\begin{center}
+\begin{tabular}{ccl}
+    \toprule
+    \textbf{Posici\'on} & \textbf{S\'imbolo} & \textbf{followpos} \\
+    \midrule
+    1 & \texttt{a} & $\{1, 2, 3\}$ \\
+    2 & \texttt{b} & $\{1, 2, 3\}$ \\
+    3 & \texttt{\#} & $\varnothing$ \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================
+\section{Paso 5: Construcci\'on del AFD}
+% ============================================================
+
+\subsection*{Estado inicial}
+
+El estado inicial es $\text{firstpos}(\text{ra\'iz}) = \{1, 2, 3\}$.
+
+Se define como estado $A = \{1, 2, 3\}$.
+
+Como la posici\'on 3 (\texttt{\#}) est\'a contenida en $A$,
+\textbf{$A$ es un estado de aceptaci\'on}.
+
+\subsection*{Transiciones desde $A$}
+
+Para cada s\'imbolo del alfabeto $\Sigma = \{\texttt{a}, \texttt{b}\}$:
+
+\begin{itemize}[nosep]
+    \item \textbf{S\'imbolo \texttt{a}:} posiciones en $A$ con s\'imbolo \texttt{a} $= \{1\}$.
+
+        $\bigcup_{i \in \{1\}} \text{followpos}(i) = \text{followpos}(1) = \{1, 2, 3\} = A$
+
+        Transici\'on: $A \xrightarrow{\texttt{a}} A$
+
+    \item \textbf{S\'imbolo \texttt{b}:} posiciones en $A$ con s\'imbolo \texttt{b} $= \{2\}$.
+
+        $\bigcup_{i \in \{2\}} \text{followpos}(i) = \text{followpos}(2) = \{1, 2, 3\} = A$
+
+        Transici\'on: $A \xrightarrow{\texttt{b}} A$
+\end{itemize}
+
+No se generan estados nuevos. El algoritmo termina.
+
+\subsection*{Tabla de transiciones}
+
+\begin{center}
+\begin{tabular}{cccc}
+    \toprule
+    \textbf{Estado} & \textbf{\texttt{a}} & \textbf{\texttt{b}} & \textbf{Aceptaci\'on} \\
+    \midrule
+    $\to A$ & $A$ & $A$ & S\'i \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================
+\section{Paso 6: AFD resultante}
+% ============================================================
+
+\begin{center}
+\begin{tikzpicture}[
+    ->,
+    >=Stealth,
+    node distance=3cm,
+    thick,
+    every state/.style={
+        minimum size=1.2cm,
+        font=\large,
+    },
+]
+    \node[state, accepting, initial, initial text=] (A) {$A$};
+
+    \path (A) edge [loop above] node {\texttt{a}} (A)
+          (A) edge [loop below] node {\texttt{b}} (A);
+\end{tikzpicture}
+\end{center}
+
+El AFD tiene un \'unico estado $A = \{1, 2, 3\}$ que es simult\'aneamente
+el estado inicial y el estado de aceptaci\'on. Ambas transiciones
+(\texttt{a} y \texttt{b}) regresan al mismo estado.
+
+% ============================================================
+\section{Validaci\'on}
+% ============================================================
+
+Se verifica que el AFD reconoce exactamente el lenguaje $L = (\texttt{a} \mid \texttt{b})^{*}$,
+es decir, cualquier cadena formada por \texttt{a} y \texttt{b}, incluyendo la
+cadena vac\'ia $\varepsilon$.
+
+\begin{center}
+\begin{tabular}{lll}
+    \toprule
+    \textbf{Cadena} & \textbf{Recorrido} & \textbf{Resultado} \\
+    \midrule
+    $\varepsilon$ (vac\'ia) & Se queda en $A$ (aceptaci\'on) & ACEPTADA \\
+    \texttt{a} & $A \to A$ (aceptaci\'on) & ACEPTADA \\
+    \texttt{b} & $A \to A$ (aceptaci\'on) & ACEPTADA \\
+    \texttt{abba} & $A \to A \to A \to A \to A$ (aceptaci\'on) & ACEPTADA \\
+    \texttt{c} & No hay transici\'on con \texttt{c} & RECHAZADA \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+Todos los resultados son consistentes con el lenguaje $(\texttt{a} \mid \texttt{b})^{*}$:
+
+\begin{itemize}[nosep]
+    \item La cerradura de Kleene acepta la cadena vac\'ia $\varepsilon$. \checkmark
+    \item Cualquier combinaci\'on de \texttt{a} y \texttt{b} es aceptada. \checkmark
+    \item S\'imbolos fuera del alfabeto $\{\texttt{a}, \texttt{b}\}$ son rechazados. \checkmark
+\end{itemize}
+
+% ============================================================
+\section{Conclusi\'on}
+% ============================================================
+
+La construcci\'on directa de $(\texttt{a}|\texttt{b})^{*}$ produce un AFD
+de un solo estado, lo cual es el resultado m\'inimo posible. Esto tiene
+sentido intuitivo: la expresi\'on acepta cualquier cadena sobre
+$\{\texttt{a}, \texttt{b}\}$ (incluyendo $\varepsilon$), por lo que no es
+necesario distinguir entre estados --- toda cadena v\'alida es aceptada
+desde el inicio.
+
+% ============================================================
+\section*{Referencias}
+% ============================================================
+
+\begin{itemize}[nosep]
+    \item Aho, Lam, Sethi, Ullman. \textit{Compilers: Principles, Techniques, and Tools}
+        (2nd ed.), Secci\'on 3.9.5.
+    \item Hopcroft, J.E. \textit{An $n \log n$ algorithm for minimizing states in a
+        finite automaton}, 1971.
+\end{itemize}
+
+\end{document}
