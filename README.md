@@ -18,8 +18,10 @@ direct-deterministic-finite-automaton/
 │   ├── minimization.py           # Minimizacion del AFD (algoritmo de Hopcroft)
 │   ├── simulation.py             # Simulacion de aceptacion de cadenas
 │   └── visualization.py          # Diagramas con Graphviz y tabla de transiciones
-├── docs/                         # Documentacion del laboratorio
-│   └── procedimiento_manual.tex  # Procedimiento manual (a|b)* a AFD (LaTeX/Overleaf)
+├── docs/                                  # Documentacion del laboratorio
+│   ├── procedimiento_manual.tex           # Procedimiento manual (a|b)* a AFD (LaTeX)
+│   ├── documentacion_implementacion.docx  # Explicacion de implementacion (Word)
+│   └── generate_docx.py                   # Script generador del .docx
 ├── output/                       # Diagramas generados (no se versiona)
 ├── main.py                       # Punto de entrada interactivo
 ├── requirements.txt              # Dependencias de Python
