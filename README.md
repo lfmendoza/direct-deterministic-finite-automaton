@@ -165,34 +165,84 @@ La concatenacion es implicita: `ab` significa `a` seguido de `b`.
 ## Arquitectura
 
 ```mermaid
-flowchart LR
-    A["Regex (infija)\n\n(a|b)*abb"] -->|"shunting_yard.py\n_desugar()\ninsert_explicit_concat()"| B["Desazucarado\n+\nConcatenacion explicita\n\n(a|b)*.a.b.b"]
+flowchart TB
+    IN[/"Expresion regular del usuario\n(a|b)*abb"/]
 
-    B -->|"shunting_yard.py\nshunting_yard()"| C["Postfijo\n\nab|*a.b.b."]
+    subgraph FASE1 ["Fase 1 · Preprocesamiento — shunting_yard.py"]
+        direction TB
+        P1["Aumentar regex\nr → (r)#"]
+        P2["_desugar( )\nExpandir azucar sintactico\na+ → a.a* · a? → (a|ε)"]
+        P3["insert_explicit_concat( )\nInsertar concatenacion explicita\n(a|b)*abb → (a|b)*.a.b.b"]
+        P4["shunting_yard( )\nConversion infija a postfija\n→ ab|*a.b.b."]
+        P1 --> P2 --> P3 --> P4
+    end
 
-    C -->|"syntax_tree.py\nbuild_syntax_tree()"| D["Arbol Sintactico\n\nnullable, firstpos\nlastpos, followpos"]
+    subgraph FASE2 ["Fase 2 · Arbol Sintactico — syntax_tree.py"]
+        direction TB
+        T1["build_syntax_tree( )\nConstruir arbol desde postfijo\nNodos: LeafNode · CatNode · OrNode · StarNode"]
+        T2["Calcular propiedades por nodo\nnullable · firstpos · lastpos"]
+        T3["_compute_followpos( )\nRegla CAT: para i en lastpos(izq) → agregar firstpos(der)\nRegla STAR: para i en lastpos(hijo) → agregar firstpos(hijo)"]
+        T1 --> T2 --> T3
+    end
 
-    D -->|"direct_dfa.py\nbuild_direct_dfa()"| E["AFD\n(construccion directa)"]
+    subgraph FASE3 ["Fase 3 · Construccion del AFD — direct_dfa.py"]
+        direction TB
+        D1["Estado inicial = firstpos(raiz)"]
+        D2["Para cada estado no marcado:\npor cada simbolo a del alfabeto,\nunir followpos de posiciones con simbolo a"]
+        D3["Marcar como aceptacion\ntodo estado que contenga la posicion de #"]
+        D1 --> D2 --> D3
+    end
 
-    E -->|"minimization.py\nminimize_dfa()"| F["AFD Minimizado"]
+    subgraph FASE4 ["Fase 4 · Minimizacion — minimization.py"]
+        direction TB
+        M1["Particion inicial\naceptacion vs no-aceptacion"]
+        M2["minimize_dfa( )\nRefinamiento iterativo de Hopcroft:\ndividir particiones segun transiciones"]
+        M3["Construir AFD minimo equivalente\nfusionando estados indistinguibles"]
+        M1 --> M2 --> M3
+    end
 
-    F --> G["visualization.py\nrender_dfa()\nprint_dfa_table()"]
-    F --> H["simulation.py\nsimulate_dfa()"]
+    subgraph FASE5 ["Fase 5 · Salida"]
+        direction LR
+        subgraph VIZ ["visualization.py"]
+            direction TB
+            V1["print_dfa_table( )\nTabla de transiciones\nen consola"]
+            V2["render_dfa( )\nDiagrama PNG\ncon Graphviz"]
+        end
+        subgraph SIM ["simulation.py"]
+            direction TB
+            S1["simulate_dfa( )\nRecorrer estados del AFD\ncon la cadena de entrada w"]
+            S2[/"ACEPTADA o RECHAZADA"/]
+            S1 --> S2
+        end
+    end
 
-    G -->|"Salida"| I["Diagrama PNG\n+\nTabla de transiciones"]
-    H -->|"Salida"| J["Cadena ACEPTADA\no RECHAZADA"]
+    IN -->|"regex: str"| FASE1
+    FASE1 -->|"postfix: str"| FASE2
+    FASE2 -->|"root, pos_symbols, followpos"| FASE3
+    FASE3 -->|"DFA (estados, transiciones, aceptacion)"| FASE4
+    FASE4 -->|"DFA minimizado"| FASE5
 
-    style A fill:#4a90d9,color:#fff
-    style B fill:#5ba0e0,color:#fff
-    style C fill:#5ba0e0,color:#fff
-    style D fill:#6db33f,color:#fff
-    style E fill:#e8a838,color:#fff
-    style F fill:#e8a838,color:#fff
-    style G fill:#9b59b6,color:#fff
-    style H fill:#9b59b6,color:#fff
-    style I fill:#2c3e50,color:#fff
-    style J fill:#2c3e50,color:#fff
+    style IN fill:#34495e,color:#fff
+    style P1 fill:#2980b9,color:#fff
+    style P2 fill:#2980b9,color:#fff
+    style P3 fill:#2980b9,color:#fff
+    style P4 fill:#2980b9,color:#fff
+    style T1 fill:#27ae60,color:#fff
+    style T2 fill:#27ae60,color:#fff
+    style T3 fill:#27ae60,color:#fff
+    style D1 fill:#d35400,color:#fff
+    style D2 fill:#d35400,color:#fff
+    style D3 fill:#d35400,color:#fff
+    style M1 fill:#8e44ad,color:#fff
+    style M2 fill:#8e44ad,color:#fff
+    style M3 fill:#8e44ad,color:#fff
+    style V1 fill:#16a085,color:#fff
+    style V2 fill:#16a085,color:#fff
+    style S1 fill:#c0392b,color:#fff
+    style S2 fill:#2c3e50,color:#fff
 ```
+
+El programa se orquesta desde `main.py`, que coordina todas las fases y maneja la interaccion con el usuario.
 
 | Modulo                       | Descripcion                                              |
 | ---------------------------- | -------------------------------------------------------- |
@@ -202,7 +252,7 @@ flowchart LR
 | `automaton/minimization.py`  | Minimizacion por refinamiento de particiones (Hopcroft)  |
 | `automaton/simulation.py`    | Prueba de aceptacion de cadenas                          |
 | `automaton/visualization.py` | Generacion de diagramas PNG y tabla de transiciones      |
-| `main.py`                    | Programa principal interactivo                           |
+| `main.py`                    | Programa principal interactivo (orquestador)             |
 
 ## Ejemplo resuelto: `(a|b)*` a AFD (procedimiento manual)
 

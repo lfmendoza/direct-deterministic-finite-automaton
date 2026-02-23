@@ -35,16 +35,74 @@ def render_dfa(
     os.makedirs(output_dir, exist_ok=True)
 
     dot = graphviz.Digraph(title, format="png")
-    dot.attr(rankdir="LR", fontsize="12")
 
-    # Nodo invisible para la flecha de entrada
-    dot.node("start", shape="point")
-    dot.edge("start", f"q{dfa.start_state}")
+    # Configuracion general del grafo para mayor claridad
+    dot.attr(
+        rankdir="LR",
+        dpi="150",
+        bgcolor="white",
+        fontname="Helvetica",
+        nodesep="0.8",
+        ranksep="1.0",
+        pad="0.5",
+        margin="0.3",
+    )
+
+    # Estilo por defecto de los nodos
+    dot.attr(
+        "node",
+        fontname="Helvetica",
+        fontsize="14",
+        style="filled",
+        fillcolor="#e8edf2",
+        color="#3b4a5a",
+        penwidth="2",
+        width="0.6",
+        height="0.6",
+    )
+
+    # Estilo por defecto de las aristas
+    dot.attr(
+        "edge",
+        fontname="Helvetica",
+        fontsize="13",
+        color="#5a6a7a",
+        fontcolor="#1a1a1a",
+        penwidth="1.5",
+        arrowsize="0.9",
+    )
+
+    # Flecha de entrada al estado inicial
+    dot.node("start", shape="point", width="0.0", height="0.0")
+    dot.edge("start", f"q{dfa.start_state}", penwidth="2", color="#2c3e50")
 
     for i in range(len(dfa.states)):
         label = f"q{i}"
-        shape = "doublecircle" if i in dfa.accept_states else "circle"
-        dot.node(f"q{i}", label=label, shape=shape)
+
+        if i in dfa.accept_states and i == dfa.start_state:
+            # Estado inicial y de aceptacion
+            dot.node(
+                f"q{i}", label=label, shape="doublecircle",
+                fillcolor="#a8d8a8", color="#2e7d32", fontcolor="#1b5e20",
+                penwidth="3",
+            )
+        elif i in dfa.accept_states:
+            # Estado de aceptacion
+            dot.node(
+                f"q{i}", label=label, shape="doublecircle",
+                fillcolor="#a8d8a8", color="#2e7d32", fontcolor="#1b5e20",
+                penwidth="3",
+            )
+        elif i == dfa.start_state:
+            # Estado inicial (no de aceptacion)
+            dot.node(
+                f"q{i}", label=label, shape="circle",
+                fillcolor="#bbdefb", color="#1565c0", fontcolor="#0d47a1",
+                penwidth="2.5",
+            )
+        else:
+            # Estado regular
+            dot.node(f"q{i}", label=label, shape="circle")
 
     # Agrupar transiciones con mismo (origen, destino) para combinar etiquetas
     edge_labels: dict[tuple[int, int], list[str]] = {}
@@ -56,7 +114,16 @@ def render_dfa(
 
     for (src, dst), symbols in edge_labels.items():
         label = ", ".join(sorted(symbols))
-        dot.edge(f"q{src}", f"q{dst}", label=label)
+
+        if src == dst:
+            # Self-loop: resaltar para que sea facil de identificar
+            dot.edge(
+                f"q{src}", f"q{dst}", label=f"  {label}  ",
+                color="#8e44ad", fontcolor="#6a1b9a",
+                penwidth="1.8",
+            )
+        else:
+            dot.edge(f"q{src}", f"q{dst}", label=f"  {label}  ")
 
     filepath = os.path.join(output_dir, filename)
     dot.render(filepath, cleanup=True)
